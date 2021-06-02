@@ -1,5 +1,8 @@
 import 'package:basic_app/view/CommonAppBar.dart';
+import 'package:basic_app/view/HomePage.dart';
 import 'package:basic_app/view/Login.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -18,28 +21,55 @@ class MyApp extends StatelessWidget {
       //home: MyHomePage(),
       initialRoute: '/',
       routes: {
-        '/': (context) => MyHomePage(),
+        '/': (context) => LandingPage(),
         '/login': (context) => LoginPage(),
       },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
+class LandingPage extends StatelessWidget {
+  final Future<FirebaseApp> _initialization = Firebase.initializeApp();
 
-class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: CommonAppBar('MAIN PAGE', 'main'),
-      body: Container(
-        child: Column(
-          children: <Widget>[],
-        ),
-      ),
+    return FutureBuilder(
+      future: _initialization,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Text("Error: ${snapshot.error}"),
+            ),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.done) {
+          return StreamBuilder(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.active) {
+                User user = snapshot.data;
+                if (user == null) {
+                  return LoginPage();
+                } else {
+                  return HomePage();
+                }
+              }
+
+              return Scaffold(
+                body: Center(
+                  child: Text("checking Authentication.."),
+                ),
+              );
+            },
+          );
+        }
+
+        return Scaffold(
+          body: HomePage(),
+        );
+      },
     );
   }
 }
